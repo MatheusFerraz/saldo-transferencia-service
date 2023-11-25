@@ -7,9 +7,6 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
-import java.util.Map;
-
 @Service
 public class ClienteServiceIntegrationImpl implements ClienteServiceIntegration {
 
