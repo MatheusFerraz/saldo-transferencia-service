@@ -15,6 +15,10 @@ import java.util.Date;
 public class Transferencia implements Serializable {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "IDENTIFICADOR")
+    public Integer id;
+
     @Column(name = "CPF_CLIENTE")
     public String cpfCliente;
 
@@ -27,4 +31,7 @@ public class Transferencia implements Serializable {
 
     @Column(name = "IDENTIFICADOR_BACEN")
     public String identificadorBacenTransferencia;
+
+    @Column(name = "NUMERO_CONTA_DESTINO")
+    public String numeroContaDestino;
 }

@@ -1,4 +1,4 @@
-package br.itau.saldotransferenciaservice.service.integration;
+package br.itau.saldotransferenciaservice.service.integration.microservices;
 
 import br.itau.saldotransferenciaservice.model.Cliente;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
@@ -16,6 +16,7 @@ public class ClienteServiceIntegrationImpl implements ClienteServiceIntegration 
 
     @HystrixCommand(fallbackMethod = "retornarClienteDefault")
     public Cliente buscarClientePorCpf(String cpfCliente) {
+        // A URL se encontra no código mas poderia ser recuperada de algum serviço tal como o SSM Parameter Store
         return restTemplate.getForObject("http://CADASTRO-CLIENTE-SERVICE/api/cliente/{cpfCliente}", Cliente.class, cpfCliente);
     }
 

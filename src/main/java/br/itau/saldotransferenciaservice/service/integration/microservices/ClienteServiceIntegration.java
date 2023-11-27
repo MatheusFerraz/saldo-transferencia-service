@@ -1,4 +1,4 @@
-package br.itau.saldotransferenciaservice.service.integration;
+package br.itau.saldotransferenciaservice.service.integration.microservices;
 
 import br.itau.saldotransferenciaservice.model.Cliente;
 import org.springframework.web.bind.annotation.GetMapping;

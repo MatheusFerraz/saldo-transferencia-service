@@ -3,8 +3,11 @@ package br.itau.saldotransferenciaservice.service;
 import br.itau.saldotransferenciaservice.exception.ApiSaldoTransferenciaException;
 import br.itau.saldotransferenciaservice.model.Cliente;
 import br.itau.saldotransferenciaservice.model.Conta;
+import br.itau.saldotransferenciaservice.model.Recepcao;
 import br.itau.saldotransferenciaservice.model.Transferencia;
-import br.itau.saldotransferenciaservice.service.integration.ClienteServiceIntegration;
+import br.itau.saldotransferenciaservice.payload.RecepcaoRequest;
+import br.itau.saldotransferenciaservice.service.integration.microservices.BacenServiceIntegration;
+import br.itau.saldotransferenciaservice.service.integration.microservices.ClienteServiceIntegration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +31,14 @@ public class EfetivadorTransferenciaService {
     @Autowired
     ClienteServiceIntegration clienteServiceIntegration;
 
+    @Autowired
+    BacenServiceIntegration bacenServiceIntegration;
+
     private static final Logger logger = LoggerFactory.getLogger(EfetivadorTransferenciaService.class);
 
     private static final String TRANSFERENCIA_OK = "Transferência concluída com sucesso!";
 
-    public String efetuarTransferencia(String cpfCliente, Double valorTransferencia) throws ApiSaldoTransferenciaException {
+    public String efetuarTransferencia(String cpfCliente, Double valorTransferencia, String numeroContaDestino) throws ApiSaldoTransferenciaException {
         try {
             Cliente dadosCliente = clienteServiceIntegration.buscarClientePorCpf(cpfCliente);
 
@@ -43,11 +49,11 @@ public class EfetivadorTransferenciaService {
                     throw new ApiSaldoTransferenciaException("Não será possível prosseguir com a transferência por falta de dados do cliente.");
                 }
 
-                Conta dadosContaCliente = contaService.buscarContaPeloCpfCliente(dadosCliente.getCpf());
-
-                if (dadosCliente.statusConta == 0) {
+                if (dadosCliente.getStatusConta() == 0) {
                     throw new ApiSaldoTransferenciaException("A conta do cliente não está ativa.");
                 }
+
+                Conta dadosContaCliente = contaService.buscarContaPeloCpfCliente(dadosCliente.getCpf());
 
                 if (dadosContaCliente.getSaldoAtual() < valorTransferencia) {
                     throw new ApiSaldoTransferenciaException("Não será possível prosseguir com a transferência por insuficiência de saldo.");
@@ -65,13 +71,13 @@ public class EfetivadorTransferenciaService {
                 }
 
                 if (totalTransferenciasDia >= 1000.00) {
-                    throw new ApiSaldoTransferenciaException("Não será possível prosseguir com a transferência, pois o limite diário de R$ 1000,00 foi atingido.");
+                    throw new ApiSaldoTransferenciaException("Não será possível prosseguir com a transferência, pois o limite diário de R$ 1.000,00 foi atingido.");
                 }
 
                 Transferencia transferenciaEfetivar =
-                        preencherDadosTransferencia(dadosCliente, valorTransferencia, dataAtual);
+                        preencherDadosTransferencia(dadosCliente, valorTransferencia, dataAtual, numeroContaDestino);
 
-                // Em um serviço real de integração poderia haver mais algum passo para efetivar a transferência
+                // Em um serviço real de integração poderia haver mais algum passo para efetivar a transferência propriamente dita
                 Transferencia transferenciaRetornada = transferenciaService.salvarTransferencia(transferenciaEfetivar);
 
                 if (transferenciaRetornada != null) {
@@ -79,6 +85,17 @@ public class EfetivadorTransferenciaService {
 
                     dadosContaCliente.setSaldoAtual(saldoAtualizado);
                     contaService.atualizarSaldoConta(dadosContaCliente);
+                }
+
+                RecepcaoRequest recepcaoRequest = new RecepcaoRequest();
+                recepcaoRequest.setHashTransacao(transferenciaRetornada.getIdentificadorBacenTransferencia());
+                recepcaoRequest.setCodigoBancoOrigem(341);
+
+                Recepcao recepcaoRetornada = bacenServiceIntegration.persistirRecepcaoTransferencia(recepcaoRequest);
+
+                if (recepcaoRetornada == null) {
+                    // Caso haja problemas em se obter confirmação do BACEN, envia-se a mensagem para uma fila
+                    // Dessa forma, é possível tentar notificar novamente e o cliente não fica impossibilitado de ter sua operação concluída
                 }
 
                 return TRANSFERENCIA_OK;
@@ -91,12 +108,14 @@ public class EfetivadorTransferenciaService {
 
     private Transferencia preencherDadosTransferencia(Cliente dadosCliente,
                                                       Double valorTransferencia,
-                                                      Date dataTransferencia) throws NoSuchAlgorithmException {
+                                                      Date dataTransferencia,
+                                                      String numeroContaDestino) throws NoSuchAlgorithmException {
         Transferencia transferencia = new Transferencia();
 
         transferencia.setValorTransferencia(valorTransferencia);
         transferencia.setCpfCliente(dadosCliente.getCpf());
         transferencia.setDataTransferencia(dataTransferencia);
+        transferencia.setNumeroContaDestino(numeroContaDestino);
 
         StringBuffer bufferIdentificador = new StringBuffer();
         bufferIdentificador.append(dadosCliente.getCpf());

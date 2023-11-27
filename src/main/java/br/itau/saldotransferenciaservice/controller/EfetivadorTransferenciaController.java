@@ -27,7 +27,8 @@ public class EfetivadorTransferenciaController {
             String resultadoTransferencia =
                     efetivadorTransferenciaService.efetuarTransferencia(
                             transferenciaRequest.getCpfCliente(),
-                            transferenciaRequest.getValorTransferencia());
+                            transferenciaRequest.getValorTransferencia(),
+                            transferenciaRequest.getNumeroContaDestino());
 
             return ResponseEntity.ok(resultadoTransferencia);
         } catch (ApiSaldoTransferenciaException e) {
