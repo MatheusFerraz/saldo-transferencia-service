@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: saldo-transferencia-service
+
+server:
+  port: 6161
+
+eureka:
+  client:
+    registerWithEureka: true
+    fetchRegistry: true
+    service-url:
+      default-zone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+error:
+ whitelabel:
+   enabled: false
