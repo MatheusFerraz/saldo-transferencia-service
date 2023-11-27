@@ -6,6 +6,7 @@ import br.itau.saldotransferenciaservice.model.Conta;
 import br.itau.saldotransferenciaservice.model.Recepcao;
 import br.itau.saldotransferenciaservice.model.Transferencia;
 import br.itau.saldotransferenciaservice.payload.RecepcaoRequest;
+import br.itau.saldotransferenciaservice.service.integration.aws.SqsService;
 import br.itau.saldotransferenciaservice.service.integration.microservices.BacenServiceIntegration;
 import br.itau.saldotransferenciaservice.service.integration.microservices.ClienteServiceIntegration;
 import org.slf4j.Logger;
@@ -33,6 +34,9 @@ public class EfetivadorTransferenciaService {
 
     @Autowired
     BacenServiceIntegration bacenServiceIntegration;
+
+    @Autowired
+    SqsService sqsService;
 
     private static final Logger logger = LoggerFactory.getLogger(EfetivadorTransferenciaService.class);
 
@@ -96,6 +100,7 @@ public class EfetivadorTransferenciaService {
                 if (recepcaoRetornada == null) {
                     // Caso haja problemas em se obter confirmação do BACEN, envia-se a mensagem para uma fila
                     // Dessa forma, é possível tentar notificar novamente e o cliente não fica impossibilitado de ter sua operação concluída
+                    sqsService.enviarMensagem(recepcaoRequest);
                 }
 
                 return TRANSFERENCIA_OK;
